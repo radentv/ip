@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Online Premium - Streaming ao Vivo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/x-icon" href="assets/icons/logo.png">
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <div class="logo">
+                <i class="fas fa-tv"></i>
+                <h1>TV Premium</h1>
+            </div>
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar Lista M3U -->
+    <div id="add-list-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-plus-circle"></i> Adicionar Lista M3U</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="url-tab">Via URL</button>
+                    <button class="tab-btn" data-tab="file-tab">Arquivo Local</button>
+                    <button class="tab-btn" data-tab="text-tab">Colar Texto M3U</button>
+                </div>
+                
+                <div class="tab-content active" id="url-tab">
+                    <div class="form-group">
+                        <label for="m3u-url"><i class="fas fa-link"></i> URL da Lista M3U</label>
+                        <input type="url" id="m3u-url" placeholder="https://exemplo.com/lista.m3u" required>
+                        <p class="help-text">Cole a URL direta do arquivo M3U</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="list-name"><i class="fas fa-heading"></i> Nome da Lista (opcional)</label>
+                        <input type="text" id="list-name" placeholder="Minha Lista de Canais">
+                    </div>
+                    <button id="load-url-btn" class="btn btn-primary btn-block">
+                        <i class="fas fa-download"></i> Carregar Lista
+                    </button>
+                </div>
+                
+                <div class="tab-content" id="file-tab">
+                    <div class="upload-area" id="drop-area">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>Arraste e solte seu arquivo M3U aqui</h3>
+                        <p>ou</p>
+                        <label for="m3u-file" class="btn btn-primary">
+                            <i class="fas fa-folder-open"></i> Selecione o arquivo
+                        </label>
+                        <input type="file" id="m3u-file" accept=".m3u,.m3u8" hidden>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="text-tab">
+                    <div class="form-group">
+                        <label for="m3u-text"><i class="fas fa-paste"></i> Cole o conteúdo M3U</label>
+                        <textarea id="m3u-text" placeholder="#EXTM3U
+#EXTINF:-1 tvg-id="" tvg-name="Canal 1" tvg-logo="logo1.png" group-title="Entretenimento",Canal 1
+http://exemplo.com/stream1.m3u8
+#EXTINF:-1 tvg-id="" tvg-name="Canal 2" tvg-logo="logo2.png" group-title="Esportes",Canal 2
+http://exemplo.com/stream2.m3u8" rows="10"></textarea>
+                    </div>
+                    <button id="load-text-btn" class="btn btn-primary btn-block">
+                        <i class="fas fa-check"></i> Processar Texto
+                    </button>
+                </div>
+                
+                <div class="modal-footer">
+                    <p><i class="fas fa-info-circle"></i> Formatos suportados: M3U e M3U8</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container Principal -->
+    <div class="app-container">
+        <!-- Cabeçalho -->
+        <header class="app-header">
+            <div class="header-left">
+                <button id="menu-toggle" class="menu-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="logo">
+                    <i class="fas fa-tv"></i>
+                    <h1>TV Premium</h1>
+                </div>
+            </div>
+            
+            <div class="header-center">
+                <div class="search-container">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="channel-search" placeholder="Buscar canais...">
+                    <button id="clear-search" class="clear-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <button id="theme-toggle" class="icon-btn" title="Alternar tema">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="add-list-btn" class="icon-btn" title="Adicionar lista">
+                    <i class="fas fa-plus-circle"></i>
+                </button>
+                <button id="lists-btn" class="icon-btn" title="Minhas listas">
+                    <i class="fas fa-list"></i>
+                </button>
+                <button id="fullscreen-btn" class="icon-btn" title="Tela cheia">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Menu Lateral -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-sliders-h"></i> Menu</h3>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-section="live">
+                    <i class="fas fa-play-circle"></i>
+                    <span>Todos os Canais</span>
+                </li>
+                <li class="menu-item" data-section="favorites">
+                    <i class="fas fa-star"></i>
+                    <span>Favoritos</span>
+                    <span id="fav-count" class="badge">0</span>
+                </li>
+                <li class="menu-item" data-section="history">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
+                </li>
+                <li class="menu-item" data-section="lists">
+                    <i class="fas fa-list-alt"></i>
+                    <span>Minhas Listas</span>
+                    <span id="lists-count" class="badge">0</span>
+                </li>
+                <li class="menu-item" data-section="categories">
+                    <i class="fas fa-filter"></i>
+                    <span>Categorias</span>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <div class="quick-lists">
+                    <h4><i class="fas fa-bolt"></i> Listas Rápidas</h4>
+                    <div class="quick-list-items" id="quick-lists">
+                        <button class="quick-list-btn" data-url="https://raw.githubusercontent.com/iptv-org/iptv/master/streams/br.m3u">
+                            <i class="fas fa-globe-americas"></i> Brasil
+                        </button>
+                        <button class="quick-list-btn" data-url="https://raw.githubusercontent.com/iptv-org/iptv/master/streams/us.m3u">
+                            <i class="fas fa-flag-usa"></i> EUA
+                        </button>
+                        <button class="quick-list-btn" data-url="https://raw.githubusercontent.com/iptv-org/iptv/master/streams/mx.m3u">
+                            <i class="fas fa-globe-americas"></i> México
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            <!-- Player de Vídeo -->
+            <section class="video-player-section">
+                <div class="player-container">
+                    <div class="player-wrapper">
+                        <video id="video-player" controls playsinline>
+                            <p>Seu navegador não suporta a reprodução de vídeo HTML5.</p>
+                        </video>
+                        <div class="player-overlay" id="player-overlay">
+                            <div class="player-error" id="player-error">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <h3>Canal Offline</h3>
+                                <p>Este canal está temporariamente indisponível.</p>
+                                <button class="btn btn-secondary" id="try-again-btn">
+                                    <i class="fas fa-redo"></i> Tentar Novamente
+                                </button>
+                            </div>
+                            <div class="player-loading" id="player-loading">
+                                <div class="loading-spinner"></div>
+                                <p>Carregando canal...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="player-info">
+                        <h2 id="current-channel">Selecione um canal para começar</h2>
+                        <div class="player-controls">
+                            <button id="play-pause" class="control-btn">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button id="volume-toggle" class="control-btn">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                            <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1">
+                            <button id="favorite-btn" class="control-btn">
+                                <i class="far fa-star"></i>
+                            </button>
+                            <div class="time-display">
+                                <span id="current-time">00:00</span> / <span id="duration">00:00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Lista de Canais -->
+            <section class="channels-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-broadcast-tower"></i> Canais Disponíveis</h2>
+                    <div class="section-controls">
+                        <div class="channel-count">
+                            <span id="channels-count">0</span> canais
+                        </div>
+                        <div class="view-toggle">
+                            <button id="grid-view" class="view-btn active">
+                                <i class="fas fa-th"></i>
+                            </button>
+                            <button id="list-view" class="view-btn">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </div>
+                        <button id="refresh-channels" class="btn btn-secondary">
+                            <i class="fas fa-sync-alt"></i> Atualizar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="channels-container">
+                    <div class="category-filter-bar" id="category-filter">
+                        <!-- Filtros de categoria serão gerados aqui -->
+                    </div>
+                    
+                    <div class="channels-grid" id="channels-grid">
+                        <!-- Canais serão carregados dinamicamente -->
+                        <div class="no-channels" id="no-channels">
+                            <i class="fas fa-satellite-dish"></i>
+                            <h3>Nenhum canal carregado</h3>
+                            <p>Adicione uma lista M3U para começar a assistir canais.</p>
+                            <div class="action-buttons">
+                                <button id="add-list-action" class="btn btn-primary">
+                                    <i class="fas fa-plus-circle"></i> Adicionar Lista
+                                </button>
+                                <button class="btn btn-secondary try-sample-btn">
+                                    <i class="fas fa-vial"></i> Testar Lista de Exemplo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="channels-list" id="channels-list" style="display: none;">
+                        <!-- Lista de canais (visualização alternativa) -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal de Listas Salvas -->
+    <div id="lists-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-list-alt"></i> Minhas Listas</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="saved-lists-container">
+                    <!-- Listas salvas serão exibidas aqui -->
+                    <div class="no-lists" id="no-lists">
+                        <i class="fas fa-inbox"></i>
+                        <h3>Nenhuma lista salva</h3>
+                        <p>Adicione listas M3U para vê-las aqui.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="add-new-list-btn" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Adicionar Nova Lista
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+</body>
+</html>
