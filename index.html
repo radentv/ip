@@ -1,381 +1,984 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ðŸ“º TV Online â€“ Tela Cheia com MudanÃ§a de Canal</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <style>
-    :root {
-      --bg-dark: #0d0d12;
-      --card-bg: #1a1a22;
-      --accent: #e91e63;
-      --text: #f0f0f5;
-      --border-radius: 12px;
-      --tab-active: #e91e63;
-      --tab-bg: #16161d;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: var(--bg-dark);
-      color: var(--text);
-      padding: 15px;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    h1 {
-      font-weight: 700;
-      font-size: 2rem;
-      margin-bottom: 6px;
-      background: linear-gradient(90deg, #ff7eb3, var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .player-container {
-      max-width: 900px;
-      margin: 0 auto 20px;
-      background: #000;
-      border-radius: var(--border-radius);
-      overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-      position: relative;
-    }
-
-    #player {
-      width: 100%;
-      background: black;
-      display: block;
-    }
-
-    /* Setas de navegaÃ§Ã£o em tela cheia */
-    .nav-arrow {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 80px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 2.5rem;
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.3s;
-      background: linear-gradient(to right, rgba(0,0,0,0.6), transparent);
-      z-index: 10;
-    }
-
-    .nav-arrow.right {
-      right: 0;
-      left: auto;
-      background: linear-gradient(to left, rgba(0,0,0,0.6), transparent);
-    }
-
-    .player-container:hover .nav-arrow {
-      opacity: 1;
-    }
-
-    .controls {
-      max-width: 900px;
-      margin: 0 auto 20px;
-      background: var(--card-bg);
-      padding: 16px;
-      border-radius: var(--border-radius);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-
-    .input-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    input {
-      flex: 1;
-      min-width: 130px;
-      padding: 10px 12px;
-      border: 1px solid #333;
-      border-radius: 8px;
-      background: #222;
-      color: white;
-      font-size: 0.95rem;
-    }
-
-    button {
-      padding: 10px 18px;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .tabs {
-      max-width: 900px;
-      margin: 0 auto 20px;
-      display: flex;
-      overflow-x: auto;
-      gap: 8px;
-      padding: 8px 0;
-      background: var(--tab-bg);
-      border-radius: var(--border-radius);
-      padding-left: 12px;
-    }
-
-    .tab {
-      white-space: nowrap;
-      padding: 10px 16px;
-      border-radius: 8px;
-      background: transparent;
-      color: #ccc;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-weight: 600;
-    }
-
-    .tab:hover, .tab.active {
-      color: white;
-      background: var(--tab-active);
-    }
-
-    .channels-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 18px;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 10px 0;
-    }
-
-    .channel-card {
-      background: var(--card-bg);
-      border-radius: var(--border-radius);
-      padding: 12px;
-      text-align: center;
-      cursor: pointer;
-      transition: transform 0.2s;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-    }
-
-    .channel-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 6px 14px rgba(233, 30, 99, 0.35);
-    }
-
-    .channel-logo {
-      width: 70px;
-      height: 70px;
-      object-fit: contain;
-      background: #252530;
-      border-radius: 50%;
-      padding: 6px;
-      margin-bottom: 8px;
-    }
-
-    .channel-name {
-      font-size: 0.88rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 110px;
-      margin: 0 auto;
-    }
-
-    .empty {
-      text-align: center;
-      padding: 40px;
-      color: #777;
-      grid-column: 1 / -1;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player de Vídeo HLS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #f0f0f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            width: 100%;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #4cc9f0, #4361ee);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            color: #a0a0c0;
+            margin-bottom: 20px;
+        }
+        
+        .player-container {
+            background-color: #0f0f1a;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        #videoPlayer {
+            width: 100%;
+            height: auto;
+            display: block;
+            background-color: #000;
+        }
+        
+        .controls {
+            background-color: rgba(15, 15, 26, 0.95);
+            padding: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .control-btn {
+            background: none;
+            border: none;
+            color: #f0f0f0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 5px;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .control-btn:hover {
+            background-color: rgba(76, 201, 240, 0.1);
+            color: #4cc9f0;
+            transform: scale(1.05);
+        }
+        
+        .progress-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .progress-bar {
+            flex-grow: 1;
+            height: 6px;
+            background-color: #2a2a3e;
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #4361ee, #4cc9f0);
+            width: 0%;
+            border-radius: 3px;
+            transition: width 0.1s;
+        }
+        
+        .time-display {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #a0a0c0;
+            min-width: 100px;
+            text-align: center;
+        }
+        
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .volume-slider {
+            width: 80px;
+            height: 6px;
+            background-color: #2a2a3e;
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .volume-level {
+            height: 100%;
+            background-color: #4cc9f0;
+            width: 70%;
+        }
+        
+        .fullscreen-btn {
+            margin-left: auto;
+        }
+        
+        .playlist-section {
+            background-color: #0f0f1a;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: 100%;
+        }
+        
+        .playlist-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #4cc9f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .playlist {
+            list-style-type: none;
+        }
+        
+        .playlist-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #1a1a2e;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .playlist-item:hover {
+            background-color: #22223a;
+            transform: translateX(5px);
+        }
+        
+        .playlist-item.active {
+            background-color: rgba(67, 97, 238, 0.2);
+            border-left-color: #4361ee;
+        }
+        
+        .playlist-item-title {
+            font-weight: 600;
+            color: #f0f0f0;
+        }
+        
+        .playlist-item-duration {
+            color: #a0a0c0;
+            font-size: 0.9rem;
+        }
+        
+        .status {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status.connected {
+            background-color: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+        }
+        
+        .status.connecting {
+            background-color: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+        }
+        
+        .status.error {
+            background-color: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+        
+        .quality-selector {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .quality-selector select {
+            background-color: #1a1a2e;
+            color: #f0f0f0;
+            border: 1px solid #2a2a3e;
+            border-radius: 6px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+            padding: 20px;
+            border-top: 1px solid #2a2a3e;
+            width: 100%;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            color: #4cc9f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(76, 201, 240, 0.3);
+            border-radius: 50%;
+            border-top-color: #4cc9f0;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            .control-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+            
+            .time-display {
+                min-width: 80px;
+                font-size: 0.8rem;
+            }
+            
+            .volume-slider {
+                width: 60px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
 </head>
 <body>
-
-  <header>
-    <h1>TV Online</h1>
-  </header>
-
-  <div class="player-container" id="player-container">
-    <video id="player" controls playsinline></video>
-    <div class="nav-arrow left" onclick="navigateChannel(-1)">â—€</div>
-    <div class="nav-arrow right" onclick="navigateChannel(1)">â–¶</div>
-  </div>
-
-  <div class="controls">
-    <div class="input-group">
-      <input type="text" id="xtreamUrl" placeholder="URL (ex: http://ip:8080)" />
-      <input type="text" id="username" placeholder="UsuÃ¡rio" />
-      <input type="password" id="password" placeholder="Senha" />
-      <button onclick="loadAllData()"><i class="fas fa-sync"></i> Conectar</button>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-play-circle"></i> Player HLS</h1>
+            <p class="subtitle">Reprodutor de vídeo para streams HLS (.m3u8)</p>
+        </header>
+        
+        <main>
+            <div class="player-container">
+                <video id="videoPlayer" controls playsinline></video>
+                
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Carregando stream...</p>
+                </div>
+                
+                <div class="controls">
+                    <button class="control-btn" id="playPauseBtn" title="Play/Pause">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    
+                    <div class="progress-container">
+                        <span class="time-display" id="currentTime">00:00</span>
+                        <div class="progress-bar" id="progressBar">
+                            <div class="progress" id="progress"></div>
+                        </div>
+                        <span class="time-display" id="duration">00:00</span>
+                    </div>
+                    
+                    <div class="volume-container">
+                        <button class="control-btn" id="muteBtn" title="Mute/Unmute">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                        <div class="volume-slider" id="volumeSlider">
+                            <div class="volume-level" id="volumeLevel"></div>
+                        </div>
+                    </div>
+                    
+                    <button class="control-btn fullscreen-btn" id="fullscreenBtn" title="Tela Cheia">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="status connecting" id="connectionStatus">
+                <i class="fas fa-sync-alt fa-spin"></i>
+                <span>Conectando ao stream...</span>
+            </div>
+            
+            <div class="playlist-section">
+                <h2><i class="fas fa-list"></i> Playlist</h2>
+                <ul class="playlist" id="playlist">
+                    <!-- Playlist items will be added here -->
+                </ul>
+                
+                <div class="quality-selector">
+                    <label for="qualitySelect"><i class="fas fa-tachometer-alt"></i> Qualidade:</label>
+                    <select id="qualitySelect">
+                        <option value="auto">Automático</option>
+                    </select>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Player HLS desenvolvido com HTML5, CSS3, JavaScript e HLS.js | Suporte a streams .m3u8</p>
+        </footer>
     </div>
-  </div>
 
-  <div class="tabs" id="tabs-container"></div>
-  <div class="channels-grid" id="channels-grid"></div>
-
-  <script>
-    let currentHls = null;
-    let allChannels = [];
-    let visibleChannels = []; // Canais visÃ­veis na aba atual
-    let currentChannelIndex = -1;
-    let categories = ['Todos'];
-
-    // --- FunÃ§Ãµes principais ---
-    function playStream(url, index) {
-      const video = document.getElementById('player');
-      if (currentHls) {
-        currentHls.destroy();
-        currentHls = null;
-      }
-
-      if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(url);
-        hls.attachMedia(video);
-        currentHls = hls;
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
-      }
-
-      currentChannelIndex = index;
-      video.play().catch(e => console.warn("Autoplay bloqueado:", e));
-    }
-
-    function renderTabs() {
-      const tabsContainer = document.getElementById('tabs-container');
-      tabsContainer.innerHTML = '';
-      categories.forEach(cat => {
-        const tab = document.createElement('div');
-        tab.className = 'tab';
-        tab.textContent = cat;
-        tab.onclick = () => switchTab(cat);
-        tabsContainer.appendChild(tab);
-      });
-      if (tabsContainer.firstChild) tabsContainer.firstChild.classList.add('active');
-    }
-
-    function switchTab(category) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      Array.from(document.querySelectorAll('.tab')).find(t => t.textContent === category)?.classList.add('active');
-
-      if (category === 'Todos') {
-        visibleChannels = allChannels;
-      } else {
-        visibleChannels = allChannels.filter(ch => ch.category === category);
-      }
-
-      renderChannels(visibleChannels);
-      // Reseta o Ã­ndice atual (opcional)
-      currentChannelIndex = -1;
-    }
-
-    function renderChannels(channels) {
-      const grid = document.getElementById('channels-grid');
-      grid.innerHTML = '';
-      if (channels.length === 0) {
-        grid.innerHTML = '<div class="empty">Nenhum canal</div>';
-        return;
-      }
-      channels.forEach((ch, idx) => {
-        const card = document.createElement('div');
-        card.className = 'channel-card';
-        card.onclick = () => {
-          playStream(ch.url, idx);
-        };
-        const logoSrc = ch.logo || 'https://via.placeholder.com/70?text=TV';
-        card.innerHTML = `
-          <img class="channel-logo" src="${logoSrc}" onerror="this.src='https://via.placeholder.com/70?text=TV'">
-          <div class="channel-name">${ch.name}</div>
-        `;
-        grid.appendChild(card);
-      });
-    }
-
-    // --- NavegaÃ§Ã£o entre canais ---
-    function navigateChannel(direction) {
-      if (visibleChannels.length === 0) return;
-
-      if (currentChannelIndex === -1) {
-        // Se nenhum canal foi tocado, comeÃ§a do primeiro
-        currentChannelIndex = direction === 1 ? 0 : visibleChannels.length - 1;
-      } else {
-        currentChannelIndex += direction;
-        // Loop circular
-        if (currentChannelIndex >= visibleChannels.length) currentChannelIndex = 0;
-        if (currentChannelIndex < 0) currentChannelIndex = visibleChannels.length - 1;
-      }
-
-      const ch = visibleChannels[currentChannelIndex];
-      playStream(ch.url, currentChannelIndex);
-    }
-
-    // Teclas de seta
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft') {
-        navigateChannel(-1);
-        e.preventDefault();
-      } else if (e.key === 'ArrowRight') {
-        navigateChannel(1);
-        e.preventDefault();
-      }
-    });
-
-    // --- Carregamento Xtream ---
-    async function loadAllData() {
-      const url = document.getElementById('xtreamUrl').value.trim();
-      const user = document.getElementById('username').value.trim();
-      const pass = document.getElementById('password').value.trim();
-
-      if (!url || !user || !pass) {
-        alert("Preencha todos os campos!");
-        return;
-      }
-
-      document.getElementById('channels-grid').innerHTML = '<div class="empty">Conectando...</div>';
-
-      try {
-        const catRes = await fetch(`${url}/player_api.php?username=${user}&password=${pass}&action=get_live_categories`);
-        const catList = await catRes.json();
-        const catMap = {};
-        catList.forEach(c => catMap[c.category_id] = c.category_name);
-
-        const streamRes = await fetch(`${url}/player_api.php?username=${user}&password=${pass}&action=get_live_streams`);
-        const streams = await streamRes.json();
-
-        allChannels = streams.map(s => ({
-          name: s.name || 'Canal ' + s.stream_id,
-          logo: s.stream_icon || null,
-          url: `${url}/live/${user}/${pass}/${s.stream_id}.m3u8`,
-          category: catMap[s.category_id] || 'Outros'
-        }));
-
-        const uniqueCats = [...new Set(allChannels.map(ch => ch.category))];
-        uniqueCats.sort();
-        categories = ['Todos', ...uniqueCats];
-
-        renderTabs();
-        switchTab('Todos');
-
-      } catch (err) {
-        console.error(err);
-        document.getElementById('channels-grid').innerHTML = '<div class="empty" style="color:#f44336;">Erro ao carregar.</div>';
-      }
-    }
-  </script>
-
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos do DOM
+            const videoPlayer = document.getElementById('videoPlayer');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const playPauseIcon = playPauseBtn.querySelector('i');
+            const muteBtn = document.getElementById('muteBtn');
+            const muteIcon = muteBtn.querySelector('i');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progress = document.getElementById('progress');
+            const currentTimeElement = document.getElementById('currentTime');
+            const durationElement = document.getElementById('duration');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeLevel = document.getElementById('volumeLevel');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const statusIcon = connectionStatus.querySelector('i');
+            const statusText = connectionStatus.querySelector('span');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const playlistElement = document.getElementById('playlist');
+            const qualitySelect = document.getElementById('qualitySelect');
+            
+            // URL do stream HLS (m3u8)
+            const streamUrl = 'https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/604b79c558393100078faeef/master.m3u8?advertisingId={PSID}&appVersion=unknown&deviceDNT={TARGETOPT}&deviceId={PSID}&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown';
+            
+            // Playlist de exemplo (você pode adicionar mais streams aqui)
+            const playlist = [
+                {
+                    id: 1,
+                    title: "Stream Principal",
+                    url: streamUrl,
+                    duration: "Live"
+                },
+                {
+                    id: 2,
+                    title: "SBT BRASIL INTERIOR SP",
+                    url: "https://cdn.jmvstream.com/w/LVW-10801/LVW10801_Xvg4R0u57n/chunklist.m3u8",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "TV METROPOLES",
+                    url: "https://cdn-fundacao-2110.ciclano.io:1443/fundacao-2110/fundacao-2110/playlist.m3u8",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "Cine Comédia Romântica | Pluto TV Brasil ",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/62545ed3dab4380007582f7c/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Cine Crime | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/6479ff764f5ba5000878dfe2/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Cine Drama | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f1210d14ae1f80007bafb1d/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Cine Família | Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f171f032cd22e0007f17f3d/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Cine Inspiração | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5fa991b1f09e020007e78626/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Cine Romance | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f171f988ab9780007fa95ea/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Cine Sucessos | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f120e94a5714d00074576a1/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Cine Terror | Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f12111c9e6c2c00078ef3bb/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Ficção Científica | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5fa15ad6367e170007cdd098/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Filmes Ação | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f120f41b7d403000783a6d6/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Filmes Nacionais | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f5a545d0dbf7f0007c09408/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "Filmes Suspense | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f171d3442a0500007362f22/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "MovieSphere | Brasil",
+                    url: "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg00353-lionsgatestudio-moviespherebrazil-runtimelatam/playlist.m3u8",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "MyTime Movie Network | Brasil",
+                    url: "https://appletree-mytime-samsungbrazil.amagi.tv/playlist.m3u8",
+                    duration: "02:15"
+                },{
+                    id: 2,
+                    title: "RunTime | Brasil",
+                    url: "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2153",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "RunTime Ação | Brasil",
+                    url: "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2552",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "RunTime CinEspanto | Suspense e Terror | Brasil",
+                    url: "https://stream.ads.ottera.tv/playlist.m3u8?network_id=4865",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "RunTime Comédia | Brasil",
+                    url: "https://stream.ads.ottera.tv/playlist.m3u8?network_id=2553",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "RunTime Crime | Brasil",
+                    url: "https://stream.ads.ottera.tv/playlist.m3u8?network_id=4864",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "RunTime Família | Brasil",
+                    url: "https://stream.ads.ottera.tv/playlist.m3u8?network_id=4866",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "RunTime Romance | Brasil",
+                    url: "https://stream.ads.ottera.tv/playlist.m3u8?network_id=4866",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "Animais | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/6474aa984cfc2c0008883a92/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "Documentários | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f1ef1a8cec6be00072a7ac9/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "Manual do Mundo | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/664df5221dc48600087592b1/master.m3u8?deviceId=channel&deviceModel=web&deviceVersion=1.0&appVersion=1.0&deviceType=rokuChannel&deviceMake=rokuChannel&deviceDNT=1",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "Mistérios sem Solução | Pluto TV Brasil",
+                    url: "http://stitcher-ipv4.pluto.tv/v1/stitch/embed/hls/channel/62b5c5a064163d0007b2efe6/master.m3u8?deviceType=samsung-tvplus&deviceMake=samsung&deviceModel=samsung&deviceVersion=unknown&appVersion=unknown&deviceLat=0&deviceLon=0&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&advertisingId=%7BPSID%7D&us_privacy=1YNY&samsung_app_domain=%7BAPP_DOMAIN%7D&samsung_app_name=%7BAPP_NAME%7D&profileLimit=&profileFloor=&embedPartner=samsung-tvplus",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "Natureza | Pluto TV Brasil ",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f1213ba0ecebc00070e170f/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "Smithsonian Channel| Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/6298bd10d88ef000073f16b7/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "Turbo | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/6014761dfb91870008ea6463/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "TV Brasil Web",
+                    url: "https://tvbrasil-stream.ebc.com.br/index.m3u8",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "TV Cultura | São Paulo",
+                    url: "https://player-tvcultura.stream.uol.com.br/live/tvcultura_lsd.m3u8",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "inglês e português | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/64df7ab4dfa32400083c517b/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "Comedy Central | Pluto TV Brasil",
+                    url: "https://service-stitcher.clusters.pluto.tv/v1/stitch/embed/hls/channel/5f357e91b18f0b00073583d2/master.m3u8?advertisingId=%7BPSID%7D&appVersion=unknown&deviceDNT=%7BTARGETOPT%7D&deviceId=%7BPSID%7D&deviceLat=0&deviceLon=0&deviceMake=samsung&deviceModel=samsung&deviceType=samsung-tvplus&deviceVersion=unknown",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "GLOBO SP",
+                    url: "https://cdn-2.nxplay.com.br/GLOBO_SP_TK/index.m3u8",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "GLOBO SP",
+                    url: "https://cdn-2.nxplay.com.br/GLOBO_SP_TK/index.m3u8",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "GLOBO SP",
+                    url: "https://cdn-2.nxplay.com.br/GLOBO_SP_TK/index.m3u8",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "GLOBO SP",
+                    url: "https://cdn-2.nxplay.com.br/GLOBO_SP_TK/index.m3u8",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "GLOBO SP",
+                    url: "https://cdn-2.nxplay.com.br/GLOBO_SP_TK/index.m3u8",
+                    duration: "02:15"
+                },
+                {
+                    id: 2,
+                    title: "GLOBO SP",
+                    url: "https://cdn-2.nxplay.com.br/GLOBO_SP_TK/index.m3u8",
+                    duration: "02:15"
+                },
+                {
+                    id: 3,
+                    title: "Stream Alternativa 2",
+                    url: "https://content.jwplatform.com/manifests/vM7nH0Kl.m3u8",
+                    duration: "01:45"
+                }
+            ];
+            
+            // Variáveis de controle
+            let hls = null;
+            let isPlaying = false;
+            let isMuted = false;
+            let isFullscreen = false;
+            let currentVolume = 1.0;
+            
+            // Inicializar HLS.js se o navegador não suportar nativamente HLS
+            function initializePlayer() {
+                if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Navegadores com suporte nativo a HLS (Safari)
+                    videoPlayer.src = streamUrl;
+                    updateStatus('connected', 'Conectado ao stream (nativo)');
+                } else if (Hls.isSupported()) {
+                    // Usar HLS.js para navegadores sem suporte nativo
+                    hls = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: true,
+                        backBufferLength: 90
+                    });
+                    
+                    hls.loadSource(streamUrl);
+                    hls.attachMedia(videoPlayer);
+                    
+                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                        updateStatus('connected', 'Conectado ao stream (HLS.js)');
+                        populateQualityLevels();
+                    });
+                    
+                    hls.on(Hls.Events.ERROR, function(event, data) {
+                        console.error('HLS error:', data);
+                        if (data.fatal) {
+                            switch(data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    updateStatus('error', 'Erro de rede. Tentando reconectar...');
+                                    hls.startLoad();
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    updateStatus('error', 'Erro de mídia. Recarregando...');
+                                    hls.recoverMediaError();
+                                    break;
+                                default:
+                                    updateStatus('error', 'Erro fatal. Reinicie o player.');
+                                    hls.destroy();
+                                    break;
+                            }
+                        }
+                    });
+                } else {
+                    updateStatus('error', 'Seu navegador não suporta reprodução de streams HLS.');
+                    return;
+                }
+            }
+            
+            // Atualizar status da conexão
+            function updateStatus(status, message) {
+                connectionStatus.className = 'status ' + status;
+                statusText.textContent = message;
+                
+                if (status === 'connected') {
+                    statusIcon.className = 'fas fa-check-circle';
+                    loadingIndicator.style.display = 'none';
+                } else if (status === 'connecting') {
+                    statusIcon.className = 'fas fa-sync-alt fa-spin';
+                    loadingIndicator.style.display = 'flex';
+                } else if (status === 'error') {
+                    statusIcon.className = 'fas fa-exclamation-circle';
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+            
+            // Preencher níveis de qualidade disponíveis
+            function populateQualityLevels() {
+                if (!hls) return;
+                
+                // Limpar opções atuais
+                qualitySelect.innerHTML = '<option value="auto">Automático</option>';
+                
+                // Adicionar níveis de qualidade disponíveis
+                const levels = hls.levels;
+                levels.forEach((level, index) => {
+                    const height = level.height;
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${height}p`;
+                    qualitySelect.appendChild(option);
+                });
+                
+                // Definir evento para mudança de qualidade
+                qualitySelect.addEventListener('change', function() {
+                    if (this.value === 'auto') {
+                        hls.currentLevel = -1; // Nível automático
+                    } else {
+                        hls.currentLevel = parseInt(this.value);
+                    }
+                });
+            }
+            
+            // Preencher playlist
+            function populatePlaylist() {
+                playlist.forEach(item => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'playlist-item';
+                    listItem.dataset.id = item.id;
+                    listItem.dataset.url = item.url;
+                    
+                    // Marcar o primeiro item como ativo
+                    if (item.id === 1) {
+                        listItem.classList.add('active');
+                    }
+                    
+                    listItem.innerHTML = `
+                        <span class="playlist-item-title">${item.title}</span>
+                        <span class="playlist-item-duration">${item.duration}</span>
+                    `;
+                    
+                    listItem.addEventListener('click', function() {
+                        // Remover classe active de todos os itens
+                        document.querySelectorAll('.playlist-item').forEach(el => {
+                            el.classList.remove('active');
+                        });
+                        
+                        // Adicionar classe active ao item clicado
+                        this.classList.add('active');
+                        
+                        // Carregar o stream selecionado
+                        loadStream(this.dataset.url);
+                    });
+                    
+                    playlistElement.appendChild(listItem);
+                });
+            }
+            
+            // Carregar um stream
+            function loadStream(url) {
+                updateStatus('connecting', 'Conectando ao stream...');
+                
+                if (hls) {
+                    hls.destroy();
+                }
+                
+                if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                    videoPlayer.src = url;
+                } else if (Hls.isSupported()) {
+                    hls = new Hls({
+                        enableWorker: true,
+                        lowLatencyMode: true
+                    });
+                    
+                    hls.loadSource(url);
+                    hls.attachMedia(videoPlayer);
+                    
+                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                        updateStatus('connected', 'Conectado ao stream');
+                        videoPlayer.play();
+                        populateQualityLevels();
+                    });
+                    
+                    hls.on(Hls.Events.ERROR, function(event, data) {
+                        console.error('HLS error:', data);
+                        if (data.fatal) {
+                            updateStatus('error', 'Erro ao carregar stream');
+                        }
+                    });
+                }
+            }
+            
+            // Formatar tempo em MM:SS
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            
+            // Atualizar barra de progresso
+            function updateProgress() {
+                if (isNaN(videoPlayer.duration) || !isFinite(videoPlayer.duration)) return;
+                
+                const progressPercent = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+                progress.style.width = `${progressPercent}%`;
+                
+                currentTimeElement.textContent = formatTime(videoPlayer.currentTime);
+                durationElement.textContent = formatTime(videoPlayer.duration);
+            }
+            
+            // Definir volume
+            function setVolume(volume) {
+                currentVolume = volume;
+                videoPlayer.volume = volume;
+                volumeLevel.style.width = `${volume * 100}%`;
+                
+                // Atualizar ícone do mute
+                if (volume === 0) {
+                    isMuted = true;
+                    muteIcon.className = 'fas fa-volume-mute';
+                } else {
+                    isMuted = false;
+                    muteIcon.className = volume > 0.5 ? 'fas fa-volume-up' : 'fas fa-volume-down';
+                }
+            }
+            
+            // Event Listeners
+            videoPlayer.addEventListener('loadedmetadata', function() {
+                updateProgress();
+            });
+            
+            videoPlayer.addEventListener('timeupdate', updateProgress);
+            
+            videoPlayer.addEventListener('play', function() {
+                isPlaying = true;
+                playPauseIcon.className = 'fas fa-pause';
+            });
+            
+            videoPlayer.addEventListener('pause', function() {
+                isPlaying = false;
+                playPauseIcon.className = 'fas fa-play';
+            });
+            
+            videoPlayer.addEventListener('waiting', function() {
+                updateStatus('connecting', 'Bufferizando...');
+            });
+            
+            videoPlayer.addEventListener('playing', function() {
+                updateStatus('connected', 'Reproduzindo');
+            });
+            
+            videoPlayer.addEventListener('error', function() {
+                updateStatus('error', 'Erro no player de vídeo');
+            });
+            
+            // Play/Pause
+            playPauseBtn.addEventListener('click', function() {
+                if (isPlaying) {
+                    videoPlayer.pause();
+                } else {
+                    videoPlayer.play();
+                }
+            });
+            
+            // Mute/Unmute
+            muteBtn.addEventListener('click', function() {
+                if (isMuted) {
+                    setVolume(currentVolume);
+                } else {
+                    setVolume(0);
+                }
+            });
+            
+            // Controle de volume
+            volumeSlider.addEventListener('click', function(e) {
+                const rect = this.getBoundingClientRect();
+                const volume = (e.clientX - rect.left) / rect.width;
+                setVolume(Math.max(0, Math.min(1, volume)));
+            });
+            
+            // Barra de progresso
+            progressBar.addEventListener('click', function(e) {
+                if (isNaN(videoPlayer.duration)) return;
+                
+                const rect = this.getBoundingClientRect();
+                const percent = (e.clientX - rect.left) / rect.width;
+                videoPlayer.currentTime = percent * videoPlayer.duration;
+            });
+            
+            // Tela cheia
+            fullscreenBtn.addEventListener('click', function() {
+                if (!isFullscreen) {
+                    if (videoPlayer.requestFullscreen) {
+                        videoPlayer.requestFullscreen();
+                    } else if (videoPlayer.mozRequestFullScreen) {
+                        videoPlayer.mozRequestFullScreen();
+                    } else if (videoPlayer.webkitRequestFullscreen) {
+                        videoPlayer.webkitRequestFullscreen();
+                    } else if (videoPlayer.msRequestFullscreen) {
+                        videoPlayer.msRequestFullscreen();
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        document.mozCancelFullScreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                }
+                
+                isFullscreen = !isFullscreen;
+                fullscreenBtn.querySelector('i').className = isFullscreen ? 'fas fa-compress' : 'fas fa-expand';
+            });
+            
+            // Atalhos de teclado
+            document.addEventListener('keydown', function(e) {
+                // Espaço para play/pause
+                if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    playPauseBtn.click();
+                }
+                
+                // Setas para avançar/retroceder
+                if (e.code === 'ArrowRight') {
+                    videoPlayer.currentTime += 5;
+                } else if (e.code === 'ArrowLeft') {
+                    videoPlayer.currentTime -= 5;
+                }
+                
+                // Tecla 'M' para mute
+                if (e.code === 'KeyM' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                    muteBtn.click();
+                }
+                
+                // Tecla 'F' para tela cheia
+                if (e.code === 'KeyF' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                    fullscreenBtn.click();
+                }
+            });
+            
+            // Inicializar player e playlist
+            initializePlayer();
+            populatePlaylist();
+            
+            // Configurar volume inicial
+            setVolume(0.7);
+        });
+    </script>
 </body>
 </html>
