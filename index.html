@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPTV Player Pro - Com Salvamento</title>
+    <title>IPTV Player Pro - Funcional</title>
     <style>
         * {
             margin: 0;
@@ -383,6 +383,11 @@
             flex: 1;
             overflow-y: auto;
             padding: 1rem;
+            background: rgba(0,0,0,0.02);
+        }
+
+        body.dark-mode .channels-list {
+            background: rgba(255,255,255,0.02);
         }
 
         .channel-item {
@@ -438,6 +443,7 @@
         .channel-name {
             font-weight: 600;
             margin-bottom: 4px;
+            font-size: 0.95rem;
         }
 
         .channel-category {
@@ -829,7 +835,12 @@
                     </select>
                 </div>
                 <div class="channels-list" id="channelsList">
-                    <!-- Channels will be loaded here -->
+                    <div style="text-align: center; padding: 3rem; color: var(--gray);">
+                        <p>Nenhum canal carregado</p>
+                        <p style="font-size: 0.9rem; margin-top: 0.5rem;">
+                            Clique em "CARREGAR DEMO FUNCIONAL" para começar
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -856,21 +867,21 @@
 
             <div class="channel-info-card">
                 <div class="channel-info-header">
-                    <h2 id="currentChannelTitle">Selecione um canal</h2>
+                    <h2 id="currentChannelTitle">IPTV Player Pro</h2>
                     <p id="currentChannelDesc">Carregue a demo ou sua lista M3U para começar</p>
                 </div>
                 <div class="channel-meta">
                     <div class="meta-item">
                         <span>📁</span>
-                        <span id="currentCategory">Categoria: -</span>
+                        <span id="currentCategory">Status: Aguardando</span>
                     </div>
                     <div class="meta-item">
                         <span>📶</span>
-                        <span id="currentStatus">Status: Aguardando</span>
+                        <span id="currentStatus">Pronto para usar</span>
                     </div>
                     <div class="meta-item">
                         <span>⏱️</span>
-                        <span id="currentDuration">Duração: -</span>
+                        <span id="currentDuration">Clique em "Demo Funcional"</span>
                     </div>
                 </div>
             </div>
@@ -978,7 +989,6 @@
         let currentChannel = null;
         let currentListName = '';
         let savedLists = [];
-        let currentListType = 'm3u';
 
         // Notificações
         function showNotification(title, message, type = 'info') {
@@ -1018,14 +1028,13 @@
             }
         }
 
-        // Carregar demo funcional
+        // =================== CARREGAR DEMO ===================
         function loadDemo() {
             showNotification('🎬', 'Carregando demo funcional...', 'info');
             
             channels = [...WORKING_STREAMS];
             categories = new Set(channels.map(c => c.category));
             currentListName = 'Demo Funcional';
-            currentListType = 'demo';
             
             updateChannelsList();
             updateCategoryFilter();
@@ -1033,17 +1042,15 @@
             
             showNotification('✅ Sucesso', `Demo carregada com ${channels.length} canais funcionais!`, 'success');
             
-            // Selecionar primeiro canal
+            // Selecionar primeiro canal automaticamente
             setTimeout(() => {
                 if (channels.length > 0) {
                     selectChannel(channels[0]);
-                    const firstItem = document.querySelector('.channel-item');
-                    if (firstItem) firstItem.classList.add('active');
                 }
-            }, 500);
+            }, 100);
         }
 
-        // Carregar M3U do usuário
+        // =================== CARREGAR M3U ===================
         async function loadM3U() {
             const fileInput = document.getElementById('m3uFile');
             const urlInput = document.getElementById('m3uUrl').value;
@@ -1063,24 +1070,258 @@
                     m3uContent = await readFile(fileInput.files[0]);
                 } else {
                     // Usar proxy CORS
-                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(urlInput)}`;
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(urlInput)}`;
                     const response = await fetch(proxyUrl);
-                    m3uContent = await response.text();
+                    if (!response.ok) throw new Error('Falha ao buscar URL');
+                    const data = await response.json();
+                    m3uContent = data.contents;
                 }
                 
+                // Limpar dados anteriores
+                channels = [];
+                categories.clear();
+                
+                // Parse do conteúdo M3U
                 parseM3UContent(m3uContent);
+                
                 currentListName = listNameInput || 'Lista M3U';
-                currentListType = 'm3u';
                 
                 showNotification('✅ Sucesso', `Lista carregada com ${channels.length} canais`, 'success');
                 
+                // Selecionar primeiro canal
+                setTimeout(() => {
+                    if (channels.length > 0) {
+                        selectChannel(channels[0]);
+                    }
+                }, 100);
+                
             } catch (error) {
+                console.error('Erro ao carregar M3U:', error);
                 showNotification('❌ Erro', 'Falha ao carregar lista. Carregando demo...', 'error');
                 loadDemo();
             }
         }
 
-        // Salvar lista atual
+        // =================== PARSER M3U ===================
+        function parseM3UContent(content) {
+            const lines = content.split('\n');
+            
+            let currentChannelData = null;
+            
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                
+                if (line.startsWith('#EXTINF:')) {
+                    // Parse linha #EXTINF
+                    currentChannelData = parseExtinfLine(line);
+                } else if (line && !line.startsWith('#') && currentChannelData) {
+                    // Esta é a URL do stream
+                    currentChannelData.url = line.trim();
+                    
+                    // Validar URL
+                    if (isValidUrl(currentChannelData.url)) {
+                        // Adicionar categoria
+                        categories.add(currentChannelData.category);
+                        
+                        // Adicionar canal à lista
+                        channels.push({...currentChannelData});
+                    } else {
+                        console.warn('URL inválida ignorada:', currentChannelData.url);
+                    }
+                    
+                    currentChannelData = null;
+                }
+            }
+            
+            // Se não encontrou canais válidos, usar fallback
+            if (channels.length === 0) {
+                showNotification('⚠️ Aviso', 'Nenhum canal válido encontrado. Usando demo...', 'warning');
+                loadDemo();
+                return;
+            }
+            
+            updateChannelsList();
+            updateCategoryFilter();
+            updateConnectionStatus(true);
+        }
+
+        function parseExtinfLine(line) {
+            const channel = {
+                name: 'Canal Desconhecido',
+                category: 'Geral',
+                url: '',
+                logo: '',
+                description: ''
+            };
+            
+            // Extrair nome (depois da última vírgula)
+            const commaIndex = line.lastIndexOf(',');
+            if (commaIndex !== -1) {
+                channel.name = line.substring(commaIndex + 1).trim();
+            }
+            
+            // Extrair atributos
+            const attrRegex = /(\w+[-]?\w+)="([^"]*)"/g;
+            let match;
+            while ((match = attrRegex.exec(line)) !== null) {
+                if (match[1] === 'tvg-name') {
+                    channel.name = match[2] || channel.name;
+                } else if (match[1] === 'group-title') {
+                    channel.category = match[2] || 'Geral';
+                } else if (match[1] === 'tvg-logo') {
+                    channel.logo = match[2];
+                }
+            }
+            
+            return channel;
+        }
+
+        // =================== ATUALIZAR LISTA DE CANAIS ===================
+        function updateChannelsList(filteredChannels = channels) {
+            console.log('Atualizando lista de canais:', filteredChannels.length);
+            
+            channelsList.innerHTML = '';
+            
+            if (filteredChannels.length === 0) {
+                channelsList.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--gray);">
+                        <p>Nenhum canal disponível</p>
+                        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Clique em "CARREGAR DEMO FUNCIONAL"</p>
+                    </div>
+                `;
+                channelCount.textContent = '0';
+                return;
+            }
+            
+            filteredChannels.forEach((channel, index) => {
+                const channelElement = document.createElement('div');
+                channelElement.className = 'channel-item';
+                channelElement.dataset.index = index;
+                
+                // Gerar iniciais para o logo
+                const words = channel.name.split(' ').filter(w => w.length > 0);
+                let logoText = '';
+                if (words.length >= 2) {
+                    logoText = (words[0][0] + words[1][0]).toUpperCase();
+                } else if (words.length === 1 && words[0].length >= 2) {
+                    logoText = words[0].substring(0, 2).toUpperCase();
+                } else {
+                    logoText = 'TV';
+                }
+                
+                channelElement.innerHTML = `
+                    <div class="channel-logo" style="background: ${getColorFromText(channel.name)}">
+                        ${logoText}
+                    </div>
+                    <div class="channel-info">
+                        <div class="channel-name">${channel.name}</div>
+                        <div class="channel-category">${channel.category}</div>
+                    </div>
+                `;
+                
+                channelElement.onclick = () => selectChannel(channel, index);
+                channelsList.appendChild(channelElement);
+            });
+            
+            channelCount.textContent = filteredChannels.length.toString();
+            
+            // Selecionar o primeiro canal se nenhum estiver selecionado
+            if (filteredChannels.length > 0 && !currentChannel) {
+                selectChannel(filteredChannels[0], 0);
+            }
+        }
+
+        // =================== SELECIONAR CANAL ===================
+        function selectChannel(channel, index = null) {
+            console.log('Selecionando canal:', channel.name);
+            
+            currentChannel = channel;
+            
+            // Atualizar seleção visual
+            document.querySelectorAll('.channel-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Marcar como ativo
+            if (index !== null) {
+                const item = document.querySelector(`.channel-item[data-index="${index}"]`);
+                if (item) {
+                    item.classList.add('active');
+                }
+            }
+            
+            // Atualizar informações do canal
+            currentChannelTitle.textContent = channel.name;
+            currentChannelDesc.textContent = channel.description || `Canal ${channel.category}`;
+            currentCategory.textContent = `Categoria: ${channel.category}`;
+            currentStatus.textContent = 'Status: Carregando...';
+            
+            // Reproduzir vídeo
+            playChannel(channel);
+        }
+
+        // =================== REPRODUZIR CANAL ===================
+        function playChannel(channel) {
+            console.log('Reproduzindo canal:', channel.name, channel.url);
+            
+            showNotification('▶️', `Carregando: ${channel.name}`, 'info');
+            
+            videoPlayer.src = channel.url;
+            videoPlayer.load();
+            
+            videoPlayer.oncanplay = () => {
+                currentStatus.textContent = 'Status: Pronto';
+                videoPlayer.play().catch(e => {
+                    console.log('Autoplay bloqueado:', e);
+                    showNotification('ℹ️', 'Clique em PLAY para iniciar', 'info');
+                });
+            };
+            
+            videoPlayer.onplaying = () => {
+                currentStatus.textContent = 'Status: Reproduzindo';
+                playBtn.textContent = '⏸️';
+                showNotification('✅', `Reproduzindo: ${channel.name}`, 'success');
+            };
+            
+            videoPlayer.onerror = (e) => {
+                console.error('Erro no player:', e);
+                currentStatus.textContent = 'Status: Erro';
+                showNotification('❌', 'Erro ao carregar vídeo', 'error');
+                
+                // Tentar próximo canal
+                setTimeout(() => {
+                    if (channels.length > 0) {
+                        const currentIndex = channels.findIndex(c => c === channel);
+                        const nextIndex = (currentIndex + 1) % channels.length;
+                        selectChannel(channels[nextIndex], nextIndex);
+                    }
+                }, 2000);
+            };
+        }
+
+        // =================== FILTRAR CANAIS ===================
+        function updateCategoryFilter() {
+            categoryFilter.innerHTML = '<option value="all">Todas categorias</option>';
+            
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categoryFilter.appendChild(option);
+            });
+            
+            categoryFilter.onchange = function() {
+                const selectedCategory = this.value;
+                if (selectedCategory === 'all') {
+                    updateChannelsList(channels);
+                } else {
+                    const filtered = channels.filter(c => c.category === selectedCategory);
+                    updateChannelsList(filtered);
+                }
+            };
+        }
+
+        // =================== SISTEMA DE SALVAMENTO ===================
         function saveCurrentList() {
             if (channels.length === 0) {
                 showNotification('⚠️ Aviso', 'Carregue uma lista primeiro!', 'warning');
@@ -1091,30 +1332,26 @@
             openSaveModal(listName, 'm3u');
         }
 
-        // Salvar lista Xtream
         function saveXtreamList() {
             const listName = document.getElementById('xtreamListName').value || 'Lista Xtream';
             openSaveModal(listName, 'xtream');
         }
 
-        // Abrir modal de salvamento
         function openSaveModal(defaultName = '', type = 'm3u') {
             document.getElementById('saveListName').value = defaultName;
             document.getElementById('saveListType').value = type;
             saveModal.classList.add('show');
         }
 
-        // Fechar modal de salvamento
         function closeSaveModal() {
             saveModal.classList.remove('show');
         }
 
-        // Confirmar salvamento da lista
         function confirmSaveList() {
-            const listName = document.getElementById('saveListName').value;
+            const listName = document.getElementById('saveListName').value.trim();
             const listType = document.getElementById('saveListType').value;
             
-            if (!listName.trim()) {
+            if (!listName) {
                 showNotification('⚠️ Aviso', 'Digite um nome para a lista!', 'warning');
                 return;
             }
@@ -1137,7 +1374,6 @@
             showNotification('💾 Salvo', `Lista "${listName}" salva com sucesso!`, 'success');
         }
 
-        // Salvar lista no armazenamento local
         function saveListToStorage(listData) {
             savedLists = getFromLocalStorage('savedLists', []);
             
@@ -1156,7 +1392,6 @@
             loadSavedLists();
         }
 
-        // Carregar listas salvas
         function loadSavedLists() {
             savedLists = getFromLocalStorage('savedLists', []);
             savedListsContainer.innerHTML = '';
@@ -1184,16 +1419,15 @@
                         </div>
                     </div>
                     <div class="list-actions">
-                        <button class="action-btn" onclick="loadSavedList('${list.id}')">▶️</button>
-                        <button class="action-btn" onclick="exportList('${list.id}')">📤</button>
-                        <button class="action-btn" onclick="deleteList('${list.id}')">🗑️</button>
+                        <button class="action-btn" onclick="loadSavedList('${list.id}')" title="Carregar">▶️</button>
+                        <button class="action-btn" onclick="exportList('${list.id}')" title="Exportar">📤</button>
+                        <button class="action-btn" onclick="deleteList('${list.id}')" title="Excluir">🗑️</button>
                     </div>
                 `;
                 savedListsContainer.appendChild(listElement);
             });
         }
 
-        // Carregar lista salva
         function loadSavedList(listId) {
             const list = savedLists.find(l => l.id === listId);
             if (!list) return;
@@ -1201,7 +1435,6 @@
             channels = list.channels;
             categories = new Set(list.categories);
             currentListName = list.name;
-            currentListType = list.type;
             
             updateChannelsList();
             updateCategoryFilter();
@@ -1215,14 +1448,11 @@
             // Selecionar primeiro canal
             setTimeout(() => {
                 if (channels.length > 0) {
-                    selectChannel(channels[0]);
-                    const firstItem = document.querySelector('.channel-item');
-                    if (firstItem) firstItem.classList.add('active');
+                    selectChannel(channels[0], 0);
                 }
-            }, 500);
+            }, 100);
         }
 
-        // Exportar lista
         function exportList(listId) {
             const list = savedLists.find(l => l.id === listId);
             if (!list) return;
@@ -1230,7 +1460,7 @@
             // Gerar conteúdo M3U
             let m3uContent = '#EXTM3U\n';
             list.channels.forEach(channel => {
-                m3uContent += `#EXTINF:-1 tvg-id="${channel.name}" tvg-name="${channel.name}" tvg-logo="${channel.logo}" group-title="${channel.category}",${channel.name}\n`;
+                m3uContent += `#EXTINF:-1 tvg-id="${channel.name.replace(/"/g, '')}" tvg-name="${channel.name.replace(/"/g, '')}" tvg-logo="${channel.logo}" group-title="${channel.category}",${channel.name}\n`;
                 m3uContent += `${channel.url}\n`;
             });
             
@@ -1248,7 +1478,6 @@
             showNotification('📤 Exportado', `Lista "${list.name}" exportada com sucesso!`, 'success');
         }
 
-        // Deletar lista
         function deleteList(listId) {
             const list = savedLists.find(l => l.id === listId);
             if (!list) return;
@@ -1261,7 +1490,6 @@
             }
         }
 
-        // Limpar todas as listas
         function clearAllLists() {
             if (savedLists.length === 0) {
                 showNotification('ℹ️ Info', 'Não há listas para limpar', 'info');
@@ -1276,7 +1504,7 @@
             }
         }
 
-        // Conectar Xtream (simulação)
+        // =================== CONECTAR XTREAM ===================
         function connectXtream() {
             const server = document.getElementById('serverUrl').value;
             const username = document.getElementById('username').value;
@@ -1288,9 +1516,9 @@
             
             showNotification('🔌', 'Conectando ao servidor Xtream...', 'info');
             
-            // Simular conexão
+            // Simular conexão com streams que funcionam
             setTimeout(() => {
-                channels = WORKING_STREAMS.slice(0, 3).map(ch => ({
+                channels = WORKING_STREAMS.slice(0, 3).map((ch, index) => ({
                     ...ch,
                     name: `[XTREAM] ${ch.name}`,
                     category: 'Xtream Demo'
@@ -1302,207 +1530,17 @@
                 updateConnectionStatus(true);
                 
                 showNotification('✅ Conectado', 'Conexão Xtream simulada com sucesso', 'success');
-            }, 1500);
-        }
-
-        // Parser M3U
-        function parseM3UContent(content) {
-            const lines = content.split('\n');
-            channels = [];
-            categories.clear();
-            
-            let currentChannel = null;
-            
-            for (let line of lines) {
-                line = line.trim();
                 
-                if (line.startsWith('#EXTINF:')) {
-                    currentChannel = parseExtinfLine(line);
-                } else if (line && !line.startsWith('#') && currentChannel) {
-                    currentChannel.url = line;
-                    
-                    // Substituir por URL funcional se necessário
-                    if (!isValidUrl(line)) {
-                        currentChannel.url = WORKING_STREAMS[channels.length % WORKING_STREAMS.length].url;
+                // Selecionar primeiro canal
+                setTimeout(() => {
+                    if (channels.length > 0) {
+                        selectChannel(channels[0], 0);
                     }
-                    
-                    categories.add(currentChannel.category);
-                    channels.push(currentChannel);
-                    currentChannel = null;
-                }
-            }
-            
-            updateChannelsList();
-            updateCategoryFilter();
-            updateConnectionStatus(true);
+                }, 100);
+            }, 1000);
         }
 
-        function parseExtinfLine(line) {
-            const channel = {
-                name: 'Canal Desconhecido',
-                category: 'Geral',
-                url: '',
-                logo: '',
-                description: ''
-            };
-            
-            // Extrair nome
-            const nameMatch = line.match(/,(.+)$/);
-            if (nameMatch) channel.name = nameMatch[1].trim();
-            
-            // Extrair atributos
-            const attrRegex = /(\w+-?\w+)="([^"]*)"/g;
-            let match;
-            while (match = attrRegex.exec(line)) {
-                if (match[1] === 'tvg-name' && !channel.name) {
-                    channel.name = match[2];
-                } else if (match[1] === 'group-title') {
-                    channel.category = match[2] || 'Geral';
-                } else if (match[1] === 'tvg-logo') {
-                    channel.logo = match[2];
-                }
-            }
-            
-            return channel;
-        }
-
-        // Ler arquivo
-        function readFile(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.onerror = e => reject(e);
-                reader.readAsText(file);
-            });
-        }
-
-        // Validar URL
-        function isValidUrl(string) {
-            try {
-                new URL(string);
-                return true;
-            } catch {
-                return false;
-            }
-        }
-
-        // Atualizar lista de canais
-        function updateChannelsList(filteredChannels = channels) {
-            channelsList.innerHTML = '';
-            
-            if (filteredChannels.length === 0) {
-                channelsList.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: var(--gray);">
-                        <p>Nenhum canal disponível</p>
-                        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Clique em "CARREGAR DEMO FUNCIONAL"</p>
-                    </div>
-                `;
-                channelCount.textContent = '0';
-                return;
-            }
-            
-            filteredChannels.forEach((channel, index) => {
-                const channelElement = document.createElement('div');
-                channelElement.className = 'channel-item';
-                channelElement.onclick = () => selectChannel(channel);
-                
-                const logoText = channel.name.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2);
-                
-                channelElement.innerHTML = `
-                    <div class="channel-logo" style="background: ${getColorFromText(channel.name)}">
-                        ${logoText}
-                    </div>
-                    <div class="channel-info">
-                        <div class="channel-name">${channel.name}</div>
-                        <div class="channel-category">${channel.category}</div>
-                    </div>
-                `;
-                
-                channelsList.appendChild(channelElement);
-            });
-            
-            channelCount.textContent = filteredChannels.length;
-        }
-
-        // Atualizar filtro de categorias
-        function updateCategoryFilter() {
-            categoryFilter.innerHTML = '<option value="all">Todas categorias</option>';
-            categories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category;
-                option.textContent = category;
-                categoryFilter.appendChild(option);
-            });
-            
-            categoryFilter.onchange = filterChannels;
-        }
-
-        // Filtrar canais
-        function filterChannels() {
-            const selectedCategory = categoryFilter.value;
-            
-            if (selectedCategory === 'all') {
-                updateChannelsList(channels);
-            } else {
-                const filtered = channels.filter(c => c.category === selectedCategory);
-                updateChannelsList(filtered);
-            }
-        }
-
-        // Selecionar canal
-        function selectChannel(channel) {
-            currentChannel = channel;
-            
-            // Atualizar UI
-            document.querySelectorAll('.channel-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            event.currentTarget.classList.add('active');
-            
-            // Atualizar informações
-            currentChannelTitle.textContent = channel.name;
-            currentChannelDesc.textContent = channel.description || `Canal ${channel.category}`;
-            currentCategory.textContent = `Categoria: ${channel.category}`;
-            currentStatus.textContent = 'Status: Carregando...';
-            currentDuration.textContent = 'Duração: -';
-            
-            // Reproduzir vídeo
-            playChannel(channel);
-        }
-
-        // Reproduzir canal
-        function playChannel(channel) {
-            showNotification('▶️', `Carregando: ${channel.name}`, 'info');
-            
-            videoPlayer.src = channel.url;
-            videoPlayer.load();
-            
-            videoPlayer.oncanplay = () => {
-                currentStatus.textContent = 'Status: Pronto';
-                videoPlayer.play().catch(e => {
-                    console.log('Autoplay bloqueado:', e);
-                    showNotification('ℹ️', 'Clique em PLAY para iniciar', 'info');
-                });
-            };
-            
-            videoPlayer.onplaying = () => {
-                currentStatus.textContent = 'Status: Reproduzindo';
-                playBtn.textContent = '⏸️';
-                showNotification('✅', `Reproduzindo: ${channel.name}`, 'success');
-            };
-            
-            videoPlayer.onerror = () => {
-                currentStatus.textContent = 'Status: Erro';
-                showNotification('❌', 'Erro ao carregar vídeo. Tentando próximo...', 'error');
-                
-                // Tentar próximo canal
-                const currentIndex = channels.findIndex(c => c === channel);
-                const nextIndex = (currentIndex + 1) % channels.length;
-                setTimeout(() => selectChannel(channels[nextIndex]), 2000);
-            };
-        }
-
-        // Controles do player
+        // =================== CONTROLES DO PLAYER ===================
         function playPause() {
             if (videoPlayer.paused) {
                 videoPlayer.play();
@@ -1526,18 +1564,16 @@
             }
         }
 
-        // Atualizar volume
         volumeSlider.oninput = () => {
             videoPlayer.volume = volumeSlider.value;
         };
 
-        // Atualizar status de conexão
+        // =================== FUNÇÕES AUXILIARES ===================
         function updateConnectionStatus(connected) {
             statusBadge.className = connected ? 'status-badge connected' : 'status-badge disconnected';
             statusBadge.innerHTML = `<span>●</span> ${connected ? 'Conectado' : 'Desconectado'}`;
         }
 
-        // Funções auxiliares
         function getColorFromText(text) {
             const colors = [
                 '#3498db', '#2ecc71', '#e74c3c', '#9b59b6', '#1abc9c',
@@ -1559,6 +1595,24 @@
             });
         }
 
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(e);
+                reader.readAsText(file);
+            });
+        }
+
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
         // Local Storage
         function saveToLocalStorage(key, value) {
             try {
@@ -1578,7 +1632,7 @@
             }
         }
 
-        // Inicializar
+        // =================== INICIALIZAÇÃO ===================
         function init() {
             updateConnectionStatus(false);
             
